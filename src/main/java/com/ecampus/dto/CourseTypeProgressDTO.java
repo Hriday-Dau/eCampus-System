@@ -8,6 +8,7 @@ public class CourseTypeProgressDTO {
     private String crscat;
     private long requiredCount;
     private long completedCount;
+    private long extraCount;
     private int percentage;
     private String progressColor;
 
@@ -21,11 +22,10 @@ public class CourseTypeProgressDTO {
         this.crscat = crscat;
         this.requiredCount = requiredCount;
         this.completedCount = completedCount;
-        this.percentage = requiredCount > 0 ? (int) Math.min(100, (completedCount * 100) / requiredCount) : 0;
+        this.extraCount = completedCount > requiredCount ? completedCount - requiredCount : 0;
+        this.percentage = requiredCount > 0 ? (int) Math.min(100, (completedCount * 100) / requiredCount) : (completedCount >= 0 ? 100 : 0);
 
-        if (requiredCount == 0 && completedCount == 0) {
-            this.progressColor = "secondary";
-        } else if (completedCount >= requiredCount) {
+        if (completedCount >= requiredCount) {
             this.progressColor = "success";
         } else if (percentage >= 50) {
             this.progressColor = "info";
@@ -56,6 +56,9 @@ public class CourseTypeProgressDTO {
 
     public int getPercentage() { return percentage; }
     public void setPercentage(int percentage) { this.percentage = percentage; }
+
+    public long getExtraCount() { return extraCount; }
+    public void setExtraCount(long extraCount) { this.extraCount = extraCount; }
 
     public String getProgressColor() { return progressColor; }
     public void setProgressColor(String progressColor) { this.progressColor = progressColor; }

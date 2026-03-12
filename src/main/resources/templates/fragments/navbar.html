@@ -15,6 +15,30 @@
             <a th:href="@{/student/profile}">Student Profile</a>
         </li>
 
+        <!-- Student Dropdown for Graduation Requirements Courses -->
+        <li class="dropdown" sec:authorize="hasAuthority('STUDENT')">
+            <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
+                Graduation Requirements
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" th:href="@{/student/graduation-requirements/current-semester}">
+                        Current Semester
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" th:href="@{/student/graduation-requirements/overall-progress}">
+                        Overall Progress
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" th:href="@{/student/graduation-requirements/course-conversions}">
+                        Course Conversions
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <li sec:authorize="hasAuthority('STUDENT')">
             <a th:href="@{/student/registration}">Registration</a>
         </li>

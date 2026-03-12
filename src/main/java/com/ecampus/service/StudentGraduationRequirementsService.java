@@ -1,5 +1,6 @@
 package com.ecampus.service;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -7,11 +8,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.ecampus.dto.CourseTypeProgressDTO;
+import com.ecampus.dto.OverallCourseTypeProgressDTO;
 import com.ecampus.model.*;
 import com.ecampus.repository.*;
 
 @Service
-public class StudentDashboardService {
+public class StudentGraduationRequirementsService {
 
     @Autowired
     private UserRepository userRepo;
@@ -39,6 +41,12 @@ public class StudentDashboardService {
 
     @Autowired
     private Egcrstt1Repository egcrstt1Repo;
+
+    @Autowired
+    private TermCoursesRepository termCoursesRepo;
+
+    @Autowired
+    private CoursesRepository coursesRepo;
 
     /**
      * Returns the stdid for the logged-in user.
@@ -93,7 +101,8 @@ public class StudentDashboardService {
         }
 
         // --- c. Count completed (passed) courses per ctpid ---
-        Map<Long, Long> completedByCtpid = buildCompletedCounts(stdid);
+        CompletedCourseMetrics completedMetrics = buildCompletedCourseMetrics(stdid);
+        Map<Long, Long> completedByCtpid = completedMetrics.completedCounts();
 
         // --- Build progress list ---
         List<CourseTypeProgressDTO> progressList = new ArrayList<>();
@@ -123,12 +132,55 @@ public class StudentDashboardService {
     }
 
     /**
+     * Builds the course-type-wise overall graduation progress for a student.
+     */
+    public List<OverallCourseTypeProgressDTO> buildOverallProgress(Long stdid, Long schemeId, Long splid) {
+        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidOrderByCtpid(schemeId, splid);
+        CompletedCourseMetrics completedMetrics = buildCompletedCourseMetrics(stdid);
+
+        List<OverallCourseTypeProgressDTO> progressList = new ArrayList<>();
+        for (CourseTypes ct : courseTypes) {
+            progressList.add(new OverallCourseTypeProgressDTO(
+                    ct.getCtpid(),
+                    ct.getCtpcode(),
+                    ct.getCtpname(),
+                    ct.getCrscat(),
+                    safeLong(ct.getMinCourses()),
+                    completedMetrics.completedCounts().getOrDefault(ct.getCtpid(), 0L),
+                    BigDecimal.valueOf(safeLong(ct.getMinCredits())),
+                    completedMetrics.completedCredits().getOrDefault(ct.getCtpid(), BigDecimal.ZERO)));
+        }
+
+        Set<Long> knownCtpids = courseTypes.stream().map(CourseTypes::getCtpid).collect(Collectors.toSet());
+        for (Map.Entry<Long, Long> entry : completedMetrics.completedCounts().entrySet()) {
+            if (!knownCtpids.contains(entry.getKey())) {
+                CourseTypes extra = courseTypesRepo.findById(entry.getKey()).orElse(null);
+                if (extra != null) {
+                    progressList.add(new OverallCourseTypeProgressDTO(
+                            extra.getCtpid(),
+                            extra.getCtpcode(),
+                            extra.getCtpname(),
+                            extra.getCrscat(),
+                            0L,
+                            entry.getValue(),
+                            BigDecimal.ZERO,
+                            completedMetrics.completedCredits().getOrDefault(entry.getKey(), BigDecimal.ZERO)));
+                }
+            }
+        }
+
+        return progressList;
+    }
+
+    /**
      * Builds the map of ctpid -> count of completed/passed courses for a student.
      */
-    private Map<Long, Long> buildCompletedCounts(Long stdid) {
+    private CompletedCourseMetrics buildCompletedCourseMetrics(Long stdid) {
         // Get all student registrations
         List<StudentRegistrations> registrations = studentRegistrationsRepo.findregisteredsemesters(stdid);
-        if (registrations.isEmpty()) return Collections.emptyMap();
+        if (registrations.isEmpty()) {
+            return CompletedCourseMetrics.empty();
+        }
 
         List<Long> srgIds = registrations.stream()
                 .map(StudentRegistrations::getSrgid)
@@ -136,7 +188,9 @@ public class StudentDashboardService {
 
         // Get all registration courses
         List<StudentRegistrationCourses> regCourses = studentRegCoursesRepo.findBySrcsrgidIn(srgIds);
-        if (regCourses.isEmpty()) return Collections.emptyMap();
+        if (regCourses.isEmpty()) {
+            return CompletedCourseMetrics.empty();
+        }
 
         // Map tcrid -> curr_ctpid
         Map<Long, Long> tcrToCtpMap = new HashMap<>();
@@ -148,7 +202,9 @@ public class StudentDashboardService {
         }
 
         List<Long> tcrIds = new ArrayList<>(tcrToCtpMap.keySet());
-        if (tcrIds.isEmpty()) return Collections.emptyMap();
+        if (tcrIds.isEmpty()) {
+            return CompletedCourseMetrics.empty();
+        }
 
         // Get grade entries
         List<Egcrstt1> grades = egcrstt1Repo.findByStudIdAndTcridIn(stdid, tcrIds);
@@ -159,15 +215,34 @@ public class StudentDashboardService {
                 .map(Egcrstt1::getTcrid)
                 .collect(Collectors.toSet());
 
+        if (passedTcrIds.isEmpty()) {
+            return CompletedCourseMetrics.empty();
+        }
+
+        Map<Long, Long> tcrToCourseId = termCoursesRepo.findAllById(passedTcrIds).stream()
+            .filter(termCourse -> termCourse.getTcrcrsid() != null)
+            .collect(Collectors.toMap(TermCourses::getTcrid, TermCourses::getTcrcrsid));
+
+        Set<Long> courseIds = new HashSet<>(tcrToCourseId.values());
+        Map<Long, BigDecimal> creditsByCourseId = coursesRepo.findAllById(courseIds).stream()
+            .collect(Collectors.toMap(Courses::getCrsid,
+                course -> course.getCrscreditpoints() != null ? course.getCrscreditpoints() : BigDecimal.ZERO));
+
         // Count by ctpid
         Map<Long, Long> completedByCtpid = new HashMap<>();
+        Map<Long, BigDecimal> completedCreditsByCtpid = new HashMap<>();
         for (Long tcrid : passedTcrIds) {
             Long ctpid = tcrToCtpMap.get(tcrid);
             if (ctpid != null) {
                 completedByCtpid.merge(ctpid, 1L, Long::sum);
+            Long courseId = tcrToCourseId.get(tcrid);
+            BigDecimal credits = courseId != null
+                ? creditsByCourseId.getOrDefault(courseId, BigDecimal.ZERO)
+                : BigDecimal.ZERO;
+            completedCreditsByCtpid.merge(ctpid, credits, BigDecimal::add);
             }
         }
-        return completedByCtpid;
+        return new CompletedCourseMetrics(completedByCtpid, completedCreditsByCtpid);
     }
 
     /**
@@ -202,5 +277,16 @@ public class StudentDashboardService {
                        "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"};
         if (num >= 1 && num < r.length) return r[num];
         return String.valueOf(num);
+    }
+
+    private long safeLong(Long value) {
+        return value != null ? value : 0L;
+    }
+
+    private record CompletedCourseMetrics(Map<Long, Long> completedCounts,
+                                          Map<Long, BigDecimal> completedCredits) {
+        private static CompletedCourseMetrics empty() {
+            return new CompletedCourseMetrics(Collections.emptyMap(), Collections.emptyMap());
+        }
     }
 }
