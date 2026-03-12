@@ -50,19 +50,19 @@ public class StudentRegistrations {
 
     @ManyToOne
     @JoinColumn(name = "srgstdid", nullable = false)
-    private Students student;
+    private Students students;
 
     @ManyToOne
     @JoinColumn(name = "srgstrid", nullable = false)
-    private Semesters semester;
+    private Semesters semesters;
 
     // getters & setters
 
-    public Students getStudent() { return student; }
-    public void setStudent(Students student) { this.student = student; }
+    public Students getStudent() { return students; }
+    public void setStudent(Students students) { this.students = students; }
 
-    public Semesters getSemester() { return semester; }
-    public void setSemester(Semesters semester) { this.semester = semester; }
+    public Semesters getSemester() { return semesters; }
+    public void setSemester(Semesters semesters) { this.semesters = semesters; }
 
     public Long getSrgid() { return srgid; }
     public void setSrgid(Long srgid) { this.srgid = srgid; }

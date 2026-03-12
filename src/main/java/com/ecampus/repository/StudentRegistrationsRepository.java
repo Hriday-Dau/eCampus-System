@@ -32,7 +32,7 @@ public interface StudentRegistrationsRepository extends JpaRepository<StudentReg
     Optional<StudentRegistrations> findTopBysrgstdidOrderBySrgidDesc(Long studentId);
 
     // Get all semesters registered by student in order
-    @Query("SELECT sr FROM StudentRegistration sr JOIN sr.semesters s " +
+    @Query("SELECT sr FROM StudentRegistrations sr JOIN sr.semesters s " +
             "WHERE sr.students.stdid = :studentId " +
             "ORDER BY s.strseqno ASC")
     List<StudentRegistrations> findAllRegistrationsByStudentIdOrderBySemesterSequence(
@@ -40,7 +40,7 @@ public interface StudentRegistrationsRepository extends JpaRepository<StudentReg
 
 
     // Used for semester-wise grade card (corrected based on entity)
-    @Query("SELECT r FROM StudentRegistration r " +
+    @Query("SELECT r FROM StudentRegistrations r " +
             "WHERE r.students.stdid = :studentId " +
             "AND r.semesters.strid = :semesterId " +
             "AND r.srgrowstate > 0")
@@ -53,7 +53,7 @@ public interface StudentRegistrationsRepository extends JpaRepository<StudentReg
     List<Semesters> findSemestersByTerm(@Param("termId") Long termId);
     @Query("""
        SELECT r
-       FROM StudentRegistration r
+       FROM StudentRegistrations r
        JOIN r.students s
        JOIN r.semesters sem
        WHERE sem.strid = :semesterId
