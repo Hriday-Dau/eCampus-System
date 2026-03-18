@@ -379,9 +379,21 @@
     <!-- ================= COMMON (RIGHT SIDE) ================= -->
     <ul class="nav-right">
 
-        <li sec:authorize="isAuthenticated()">
-            <a th:href="@{/auth/change-password}">Change Password</a>
+        <li sec:authorize="hasAuthority('STUDENT')">
+            <a th:href="@{/student/change-password}">Change Password</a>
         </li>
+
+        <li sec:authorize="hasAuthority('FACULTY')">
+            <a th:href="@{/faculty/change-password}">Change Password</a>
+        </li>
+
+        <li sec:authorize="hasAuthority('ADMIN')">
+            <a th:href="@{/admin/change-password}">Change Password</a>
+        </li>
+
+        <!-- <li sec:authorize="isAuthenticated()">
+            <a th:href="@{/auth/change-password}">Change Password</a>
+        </li> -->
 
         <li sec:authorize="isAuthenticated()">
             <form th:action="@{/logout}" method="post" style="display:inline;">
