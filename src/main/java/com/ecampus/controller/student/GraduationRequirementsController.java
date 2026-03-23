@@ -39,7 +39,8 @@ public class GraduationRequirementsController {
                         context.schemeId(), context.splid(), context.currentSemester());
 
         // Compute summary stats
-        long totalCompleted = progressList.stream().mapToLong(CourseTypeProgressDTO::getCompletedCount).sum();
+        long totalExtra = progressList.stream().mapToLong(CourseTypeProgressDTO::getExtraCount).sum();
+        long totalCompleted = progressList.stream().mapToLong(CourseTypeProgressDTO::getCompletedCount).sum() - totalExtra;
         long totalRequired = progressList.stream().mapToLong(CourseTypeProgressDTO::getRequiredCount).sum();
         long typesFulfilled = progressList.stream()
                 .filter(p -> p.getCompletedCount() >= p.getRequiredCount())
@@ -62,13 +63,18 @@ public class GraduationRequirementsController {
                 List<OverallCourseTypeProgressDTO> progressList = srgService
                                 .buildOverallProgress(context.stdid(), context.schemeId(), context.splid());
 
-                long totalCompletedCourses = progressList.stream().mapToLong(OverallCourseTypeProgressDTO::getCompletedCourses).sum();
+                long totalExtraCourses = progressList.stream().mapToLong(OverallCourseTypeProgressDTO::getExtraCourses).sum();
+                long totalCompletedCourses = progressList.stream().mapToLong(OverallCourseTypeProgressDTO::getCompletedCourses).sum() - totalExtraCourses;
                 long totalRequiredCourses = progressList.stream().mapToLong(OverallCourseTypeProgressDTO::getMinCourses).sum();
                 long totalRemainingCourses = Math.max(0L, totalRequiredCourses - totalCompletedCourses);
 
+                BigDecimal totalExtraCredits = progressList.stream()
+                                .map(OverallCourseTypeProgressDTO::getExtraCredits)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
                 BigDecimal totalCompletedCredits = progressList.stream()
                                 .map(OverallCourseTypeProgressDTO::getCompletedCredits)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                .subtract(totalExtraCredits);
                 BigDecimal totalRequiredCredits = progressList.stream()
                                 .map(OverallCourseTypeProgressDTO::getMinCredits)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);

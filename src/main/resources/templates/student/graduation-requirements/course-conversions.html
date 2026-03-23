@@ -456,6 +456,9 @@
                                 <span th:if="${c.changedFromOriginal}" class="changed-pill">Changed</span>
                             </td>
                         </tr>
+                        <tr th:if="${#lists.isEmpty(g.courses)}">
+                            <td colspan="4" class="text-muted">No courses taken yet for this course type.</td>
+                        </tr>
                         </tbody>
                     </table>
                 </div>

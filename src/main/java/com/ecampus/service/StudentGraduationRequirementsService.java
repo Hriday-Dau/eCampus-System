@@ -92,8 +92,11 @@ public class StudentGraduationRequirementsService {
     public List<CourseTypeProgressDTO> buildCurrentSemesterProgress(Long stdid, Long batchId,
                                                                       Long schemeId, Long splid,
                                                                       String currentSemesterName) {
-        // --- a. Get all course types for this scheme + splid ---
-        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidOrderByCtpid(schemeId, splid);
+        // Get applicable splids: if splid==0 use [0], else use [0, splid]
+        List<Long> applicableSplids = getApplicableSplids(splid);
+
+        // --- a. Get all course types for this scheme + applicable splids ---
+        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidIn(schemeId, applicableSplids);
 
         // --- b. Generate semester name list up to current ---
         List<String> semesterNames = generateSemesterNamesUpTo(currentSemesterName);
@@ -102,7 +105,7 @@ public class StudentGraduationRequirementsService {
         Map<Long, Long> requiredByCtpid = new HashMap<>();
         if (!semesterNames.isEmpty()) {
             List<SchemeCourses> schemeCourses = schemeCoursesRepo
-                    .findBySchemeIdAndSplidAndSemesterNameIn(schemeId, splid, semesterNames);
+                    .findBySchemeIdAndSplidInAndSemesterNameIn(schemeId, applicableSplids, semesterNames);
             requiredByCtpid = schemeCourses.stream()
                     .filter(sc -> sc.getCtpid() != null)
                     .collect(Collectors.groupingBy(SchemeCourses::getCtpid, Collectors.counting()));
@@ -143,7 +146,10 @@ public class StudentGraduationRequirementsService {
      * Builds the course-type-wise overall graduation progress for a student.
      */
     public List<OverallCourseTypeProgressDTO> buildOverallProgress(Long stdid, Long schemeId, Long splid) {
-        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidOrderByCtpid(schemeId, splid);
+        // Get applicable splids: if splid==0 use [0], else use [0, splid]
+        List<Long> applicableSplids = getApplicableSplids(splid);
+
+        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidIn(schemeId, applicableSplids);
         CompletedCourseMetrics completedMetrics = buildCompletedCourseMetrics(stdid);
 
         List<OverallCourseTypeProgressDTO> progressList = new ArrayList<>();
@@ -219,7 +225,10 @@ public class StudentGraduationRequirementsService {
     }
 
     private CourseConversionComputation buildCourseConversionComputation(Long stdid, Long schemeId, Long splid) {
-        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidOrderByCtpid(schemeId, splid);
+        // Get applicable splids: if splid==0 use [0], else use [0, splid]
+        List<Long> applicableSplids = getApplicableSplids(splid);
+
+        List<CourseTypes> courseTypes = courseTypesRepo.findBySchemeIdAndSplidIn(schemeId, applicableSplids);
         Map<Long, CourseTypes> courseTypeById = courseTypes.stream()
                 .collect(Collectors.toMap(CourseTypes::getCtpid, ct -> ct, (left, right) -> left));
         Map<Long, Long> minCoursesByCtpid = courseTypes.stream()
@@ -394,7 +403,6 @@ public class StudentGraduationRequirementsService {
         }
 
         List<CourseConversionTypeGroupDTO> groups = groupsByCtpid.values().stream()
-                .filter(group -> !group.getCourses().isEmpty())
                 .peek(group -> group.getCourses().sort(Comparator
                         .comparing((CourseConversionCourseDTO c) -> nullSafe(c.getCrscode()))
                         .thenComparing(c -> nullSafe(c.getCrsname()))))
@@ -537,6 +545,19 @@ public class StudentGraduationRequirementsService {
 
     private String nullSafe(String value) {
         return value != null ? value : "";
+    }
+
+    /**
+     * Returns the applicable splids based on the given splid:
+     * - If splid == 0, returns [0]
+     * - If splid > 0, returns [0, splid]
+     * This is because a specialization inherits all base courses from splid=0.
+     */
+    private List<Long> getApplicableSplids(Long splid) {
+        if (splid == null || splid <= 0) {
+            return Arrays.asList(0L);
+        }
+        return Arrays.asList(0L, splid);
     }
 
     private long safeLong(Long value) {

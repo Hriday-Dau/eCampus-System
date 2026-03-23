@@ -27,7 +27,7 @@ public interface BatchesRepository extends JpaRepository<Batches, Long> {
     @Query("SELECT b FROM Batches b WHERE b.bchprgid = :prgid ORDER BY b.bchname")
     List<Batches> findByPrgId(@Param("prgid") Long prgid);
 
-    @Query(value = "SELECT MAX(b.bchid) FROM Batches b", nativeQuery = true)
+    @Query(value = "SELECT MAX(b.bchid) FROM ec2.batches b", nativeQuery = true)
     Integer findMaxBatchId();
 
 //    List<Batches> findAllByOrderByBchidDesc();
