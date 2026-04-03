@@ -58,7 +58,7 @@ public class StudentDashboardController {
         String encodedPassword = passwordEncoder.encode(newPassword);
 
         String username = authentication.getName();
-        Users user = userRepo.findWithName(username).orElseThrow(() -> new RuntimeException("User not found"));
+        Users user = userRepo.findByUname(username).orElseThrow(() -> new RuntimeException("User not found"));
 
         // Save password
         user.setPassword(encodedPassword);

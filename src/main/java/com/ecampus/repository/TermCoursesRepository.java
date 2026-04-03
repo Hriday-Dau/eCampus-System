@@ -204,7 +204,10 @@ public interface TermCoursesRepository extends JpaRepository<TermCourses, Long> 
                 "AND tc.crstype = 'ELECTIVE' AND tc.tcrslot IS NOT NULL", nativeQuery = true)
     List<Object[]> findElectiveCoursesByTerm(@Param("termId") Long termId);
 
-    @Query(value = "select tcr.tcrid,tca.ctpid from ec2.termcourses tcr join ec2.courses crs on tcr.tcrcrsid=crs.crsid join ec2.termcourseavailablefor tca on tca.tcatcrid=tcr.tcrid where tca.tcabchid=:bchid and tcr.tcrtrmid=:trmid and crs.crscode=:crscode ;", nativeQuery = true)
+    @Query(value = "select tcr.tcrid,tca.ctpid from ec2.termcourses tcr join ec2.courses crs on tcr.tcrcrsid=crs.crsid join ec2.termcourseavailablefor tca on tca.tcatcrid=tcr.tcrid where tca.tcabchid=:bchid and tcr.tcrtrmid=:trmid and crs.crscode=:crscode", nativeQuery = true)
     List<Object[]> findForElectiveRegSave(@Param("bchid") Long bchid, @Param("trmid") Long trmid, @Param("crscode") String crscode);
+
+    @Query(value = "select crs.crscode,crs.crsname,CONCAT(crs.crslectures, '-', crs.crstutorials, '-', crs.crspracticals, '-', crs.crscreditpoints) as ltpc,tcr.tcrid from ec2.termcourses tcr join ec2.courses crs on tcr.tcrcrsid=crs.crsid where tcr.tcrid in (:tcrids)", nativeQuery = true)
+    List<Object[]> findCrsByListTcrids(@Param("tcrids") List<Long> tcrids);
 
 }

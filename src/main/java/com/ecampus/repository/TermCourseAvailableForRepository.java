@@ -26,9 +26,18 @@ public interface TermCourseAvailableForRepository extends JpaRepository<TermCour
                 "WHERE tc.tcrtrmid = :trmid " +
                 "AND b.bchname = :bchname " +
                 "AND sd.splname = :splname " +
-                "AND sem.strtrmid = :trmid AND tca.tcaelectivetype IS NOT NULL", nativeQuery = true)
+                "AND sem.strtrmid = :trmid AND tca.tcaelectivetype IS NOT NULL AND tc.tcrslot IS NOT NULL", nativeQuery = true)
     List<Object[]> findAvailableElectivesDetails(@Param("trmid") Long trmid, 
                                                 @Param("bchname") String bchname, 
                                                 @Param("splname") String splname);
+
+    @Query(value = "SELECT * FROM ec2.termcourseavailablefor tca WHERE tca.tcatcrid = :tcrid AND tca.tcabchid = :bchid", nativeQuery = true)
+    TermCourseAvailableFor findByTcridAndBchid(@Param("tcrid") Long tcrid, @Param("bchid") Long bchid);
+
+    @Query(value = "select tca.tcatcrid from ec2.termcourseavailablefor tca join ec2.termcourses tc on tca.tcatcrid=tc.tcrid where tca.tcabchid=:bchid and tc.tcrtrmid=:trmid and tc.tcrslot is not null and tca.tcaelectivetype is not null", nativeQuery = true)
+    List<Long> findByTrmAndBch(@Param("trmid") Long trmid, @Param("bchid") Long bchid);
+
+    @Query(value = "select crs.crscode,sum(tca.tca_seats-tca.tca_booked) from ec2.termcourseavailablefor tca join ec2.termcourses tc on tca.tcatcrid=tc.tcrid join ec2.courses crs on tc.tcrcrsid=crs.crsid where tc.tcrtrmid=78 and tca.tcaelectivetype is not null and tc.tcrslot is not null group by tca.tcatcrid,crs.crscode", nativeQuery = true)
+    List<Object[]> getForAddDrop();
     
 }

@@ -26,6 +26,9 @@ public interface UserRepository extends JpaRepository<Users, Long>, UserDetailsR
     @Query(value = "SELECT * FROM ec2.users WHERE univid = :univid", nativeQuery = true)
     Optional<Users> findByUnivId(@Param("univid") String univId);
 
+    @Query(value = "SELECT * FROM ec2.users WHERE uname = :uname", nativeQuery = true)
+    Optional<Users> findByUname(@Param("uname") String uname);
+
     @Query(value = """
         SELECT u.*
         FROM ec2.users u
@@ -71,4 +74,7 @@ public interface UserRepository extends JpaRepository<Users, Long>, UserDetailsR
     List<Users> searchFacultyByName(@Param("query") String query);
 
     List<Users> findByUemailContainingIgnoreCase(String name);
+
+    @Query(value = "select u.uemail,st.stdinstid,CONCAT(st.stdfirstname, ' ', st.stdmiddlename, ' ', st.stdlastname),sd.splname,adp.addcount,adp.addp1,adp.addp2,adp.addp3,adp.addp4,adp.drop1,adp.drop1_p1,adp.drop1_p2,adp.drop1_p3,adp.drop2,adp.drop2_p1,adp.drop2_p2,adp.drop2_p3,adp.drop3,adp.drop3_p1,adp.drop3_p2,adp.drop3_p3 from ec2.adddroppref adp join ec2.students st on adp.sid=st.stdid join ec2.users u on st.stdid=u.stdid join ec2.batches bch on st.stdbchid=bch.bchid join ec2.schemedetails sd on bch.scheme_id=sd.scheme_id and bch.splid=sd.splid", nativeQuery = true)
+    List<Object[]> getForAddDrop();
 }

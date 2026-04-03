@@ -38,6 +38,9 @@ public class ElectiveRegistrationSaveController {
     private TermCoursesRepository termCrsRepo;
 
     @Autowired
+    private TermCourseAvailableForRepository termCrsAvailableForRepo;
+
+    @Autowired
     private StudentRegistrationCoursesRepository studRegCrsRepo;
 
     @GetMapping
@@ -70,26 +73,20 @@ public class ElectiveRegistrationSaveController {
                 // Use the formatter to get the text exactly as it looks in Excel
                 String stdinstid = formatter.formatCellValue(cell1);;
                 String crscode = formatter.formatCellValue(cell2);;
-
-                System.out.println("Stdinstid: "+stdinstid);
-                System.out.println("Crscode: "+crscode);
                 
                 Long stdid = studRepo.findStdid(stdinstid);
-                System.out.println("Stdid: "+stdid);
                 Long bchid = studRepo.findBatchIdByStudentId(stdinstid);
-                System.out.println("Batchid: "+bchid);
                 Long trmid = termRepo.findMaxTrmid();
-                System.out.println("TermId: "+trmid);
                 Long strid = semRepo.findSemByBchAndTrm(bchid,trmid);
-                System.out.println("Strid: "+strid);
                 StudentRegistrations stdReg = stdRegRepo.findByStudentIdAndSemesterId(stdid, strid);
 
                 List<Object[]> tcrctp = termCrsRepo.findForElectiveRegSave(bchid, trmid, crscode);
                 Object[] value = tcrctp.get(0);
                 Long tcrid = ((Number) value[0]).longValue();
                 Long ctpid = ((Number) value[1]).longValue();
-                System.out.println("Tcrid: "+tcrid);
-                System.out.println("Ctpid: "+ctpid);
+
+                TermCourseAvailableFor tca = termCrsAvailableForRepo.findByTcridAndBchid(tcrid, bchid);
+                tca.setTca_booked(tca.getTca_booked()+1);
 
                 Long srcid = studRegCrsRepo.findMaxSrcId();
                 StudentRegistrationCourses src = new StudentRegistrationCourses();
